@@ -1,9 +1,29 @@
 ﻿// Insert your MultiSet.fs file here. All modules must be internal
 
 module internal MultiSet
-
-    type MultiSet<'a> = Temp of unit // Not implemented
-
-    let empty : MultiSet<'a> = Temp () // Not implemented
-    let add   : 'a -> uint32 -> MultiSet<'a> -> MultiSet<'a> = fun _ _ _ -> failwith "Not implemented" 
-    let fold  : ('b -> 'a -> uint32 -> 'b) -> 'b -> MultiSet<'a> -> 'b = fun _ _ _ -> failwith "Not implemented"
+    type MultiSet<'a when 'a : comparison> = Map<'a, uint32>
+    
+    let empty : MultiSet<'a> = Map.empty
+    let isEmpty (map:MultiSet<'a>) = Map.isEmpty map
+    let size (map:MultiSet<'a>) = map |> Map.fold (fun acc _ value -> acc + value) 0u ;
+    let contains a (s:MultiSet<'a>) = s.ContainsKey a
+    let numItems a (s:MultiSet<'a>) = s.TryFind a |> Option.defaultValue 0u
+        
+    let add (a:'a) (n:uint32) (s:MultiSet<'a>) : MultiSet<'a> = s.Add (a, n)
+    let addSingle (a:'a) (s:MultiSet<'a>) = s.Add(a, 1u)  
+    let remove (a:'a) (n:uint32) (s:MultiSet<'a>) : MultiSet<'a> =
+        let timesOccured = s.TryFind a |> Option.defaultValue 0u
+        if timesOccured <= n then
+            s.Remove a
+        else
+            s.Add(a, timesOccured - n)
+        
+    let removeSingle (a:'a) (s:MultiSet<'a>) : MultiSet<'a> =
+        if contains a s then
+            let value = s.TryFind a |> Option.defaultValue 0u
+            s.Remove a
+            s.Add(a, value - 1u)
+            else s
+    let fold f acc (s:MultiSet<'b>) = Map.fold f acc s
+    
+    let foldBack f (s:MultiSet<'b>) acc = Map.foldBack f s acc

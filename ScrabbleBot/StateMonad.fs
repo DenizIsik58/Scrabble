@@ -1,8 +1,6 @@
 ﻿// Insert your StateMonad.fs from Assignment 6 here. All modules must be internal.
-
-
 module internal StateMonad
-
+    open System
     type Error = 
         | VarExists of string
         | VarNotFound of string
@@ -19,6 +17,12 @@ module internal StateMonad
                    reserved : Set<string> }
 
     type SM<'a> = S of (State -> Result<'a * State, Error>)
+    
+    let removeFirst xs =
+        match xs with
+        | x::list -> list
+        | _ -> []
+        
 
     let mkState lst word reserved = 
            { vars = [Map.ofList lst];
@@ -48,13 +52,23 @@ module internal StateMonad
     let push : SM<unit> = 
         S (fun s -> Success ((), {s with vars = Map.empty :: s.vars}))
 
-    let pop : SM<unit> = failwith "Not implemented"      
+    let pop : SM<unit> = S (fun s -> Success((), {s with vars = removeFirst s.vars })) 
 
-    let wordLength : SM<int> = failwith "Not implemented"      
+    let wordLength : SM<int> = S (fun s -> Success(s.word.Length, s))  
+    
+    let characterValue (pos : int) : SM<char> =
+        S (fun s ->
+            if pos > s.word.Length-1 || pos < 0 then Failure (IndexOutOfBounds pos)
+            
+            else
+                let char, _ = s.word.[pos]
+                Success(char, s))
 
-    let characterValue (pos : int) : SM<char> = failwith "Not implemented"      
-
-    let pointValue (pos : int) : SM<int> = failwith "Not implemented"      
+    let pointValue (pos : int) : SM<int> = S (fun s ->
+            if pos > s.word.Length-1 || pos < 0 then Failure (IndexOutOfBounds pos)
+            else
+                let _, value = s.word.[pos]
+                Success(value, s))    
 
     let lookup (x : string) : SM<int> = 
         let rec aux =
@@ -69,6 +83,19 @@ module internal StateMonad
               match aux (s.vars) with
               | Some v -> Success (v, s)
               | None   -> Failure (VarNotFound x))
+        
+    let update (x : string) (v:int): SM<unit> = 
+        let rec aux revised notRevised=
+            match notRevised with
+            | []      -> (None, List.empty)
+            | m :: ms -> 
+                match Map.tryFind x m with
+                | Some v -> (Some v, revised @ ((Map.add x v m) :: ms))
+                | None   -> aux (revised @ [m]) ms
 
-    let declare (var : string) : SM<unit> = failwith "Not implemented"   
-    let update (var : string) (value : int) : SM<unit> = failwith "Not implemented"      
+        S (fun s -> 
+              match aux List.empty (s.vars) with
+              | (Some _, m) -> Success ((), {s with vars = m})
+              | (None, _)   -> Failure (VarNotFound (x)))
+
+    let declare (var : string) : SM<unit> = failwith "Not implemented"
