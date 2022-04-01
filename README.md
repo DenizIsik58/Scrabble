@@ -26,3 +26,4 @@ To disconnect from your current connection use the following command:
 dotnet nuget remove source FP2022
 ```
 
+If successful, navigate to the ScrabbleGame folder where `Program.fs` is located and run `dotnet run`. That's it!
