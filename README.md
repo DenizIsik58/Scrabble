@@ -1,6 +1,9 @@
-## Scrabble
+# Scrabble
+This is a scrabble game being developed for the course Functional Programming 2022.
 
+## Prerequisites
 In order to start the application make sure to connect to the NuGet server with the following command:
+
 
 ```
 dotnet nuget add source https://nuget.pkg.github.com/jesper-bengtson/index.json -n FP2022 -u jesper-bengtson -p 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 --store-password-in-clear-text
