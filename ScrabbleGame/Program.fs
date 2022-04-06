@@ -1,6 +1,8 @@
 ﻿// Learn more about F# at http://fsharp.org
 
 open System
+open System.Collections.Generic
+open ScrabbleUtil
 
 let time f =
     let start = System.DateTime.Now
@@ -28,7 +30,7 @@ let main argv =
 
 
     let board        = ScrabbleUtil.StandardBoard.standardBoard ()
-//    let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
+    let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
 
 //    let board      = ScrabbleUtil.RandomBoard.randomBoard ()
 //    let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
@@ -48,15 +50,18 @@ let main argv =
 
     let dictAPI =
         // Uncomment if you have implemented a dictionary. last element None if you have not implemented a GADDAG
-        // Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
+        //Some (Dictionary.empty, Dictionary.insert, Dictionary.step, Some Dictionary.reverse) 
         None
 
     // Uncomment this line to call your client
-    // let players    = [("Your name here", YourClientName.Scrabble.startGame)]
+    
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
+        
+    let players    = spawnMultiples "ElitenBot" dictionary YourClientName.Scrabble.startGame 2
+    
 
-    let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 4
+    //let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 4
 
 
     do ScrabbleServer.Comm.startGame 
