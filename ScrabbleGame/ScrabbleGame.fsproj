@@ -8,8 +8,8 @@
   <ItemGroup>
 
     <Content Include="Dictionaries\English.txt" />
-    <Compile Include="Program.fs" />
-  </ItemGroup>
+    <Compile Include="Trie.fsi" />
+    <Compile Include="Trie.fs" />  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Oxyphenbutazone" Version="1.0.11" />

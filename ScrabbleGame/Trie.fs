@@ -1,4 +1,4 @@
-module ScrabbleBot.Dict
+module Dictionary
 
     open System.Security.Authentication
 
