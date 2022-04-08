@@ -1,7 +1,7 @@
 module ScrabbleBot.Dict
 
-    type Dict = Set<string>
+    type Dictionary
     
-    val empty : unit -> Dict
-    val insert : string -> Dict -> Dict
-    val lookup : string -> Dict -> bool
+    val empty : unit -> Dictionary
+    val insert : string -> Dictionary -> Dictionary
+    val lookup : string -> Dictionary -> bool
