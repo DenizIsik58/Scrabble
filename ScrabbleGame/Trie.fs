@@ -1,5 +1,6 @@
 module Dictionary
 
+open System.Linq
 open System.Security.Authentication
 
 // This trie implementation has been taken from the lecture_4 slides and been reworked
@@ -29,13 +30,15 @@ let insert key dict : Dictionary =
     aux key dict
     dict
 
-
-let step (c : char) (d : Dictionary) = Some(false, empty())
-
-
 let rec lookup key =
     function
     | Leaf -> false
     | Node (b, l) when key = "" -> b.Value
     | Node (b, l) -> lookup (key.[1..]) l.[at key].Value
-
+    
+let step (c : char) (dict : Dictionary) =
+    match dict with
+        | Leaf -> None
+        | Node (b, l) -> Some(lookup (c.ToString()) dict, l.[at (c.ToString())].Value)
+    
+    
