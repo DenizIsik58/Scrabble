@@ -1,8 +1,8 @@
-module Dictionary
+module Trie
 
-    type Dictionary
+    type Trie
     
-    val empty : unit -> Dictionary
-    val insert : string -> Dictionary -> Dictionary
-    val lookup : string -> Dictionary -> bool
-    val step : char -> Dictionary -> (bool * Dictionary) option
+    val empty : unit -> Trie
+    val insert : string -> Trie -> Trie
+    val lookup : string -> Trie -> bool
+    val step : char -> Trie -> (bool * Trie) option

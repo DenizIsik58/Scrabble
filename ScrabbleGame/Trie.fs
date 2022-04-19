@@ -1,4 +1,4 @@
-module Dictionary
+module Trie
 
 open System.Linq
 open System.Security.Authentication
@@ -8,9 +8,9 @@ open System.Security.Authentication
 // 2. If the key is a word we insert (true, map<char, Dictionary>)
 // 3. The trie can still contain other words and therefore it has to look further even if it sees true or false.
 
-type Dictionary =
+type Trie =
     | Leaf
-    | Node of bool ref * Dictionary ref list
+    | Node of bool ref * Trie ref list
 
 
 // Find the index of the char in the tree
@@ -20,7 +20,7 @@ let at (key : string) = int key.[0] - int 'A'
 let empty () = Node(ref false, List.init 26 (fun x -> ref Leaf))
 
 
-let insert key dict : Dictionary =
+let insert key dict : Trie =
     let rec aux key =
         function
         | Leaf -> failwith "Failed to insert key in the specified index"
@@ -36,7 +36,7 @@ let rec lookup key =
     | Node (b, l) when key = "" -> b.Value
     | Node (b, l) -> lookup (key.[1..]) l.[at key].Value
     
-let step (c : char) (dict : Dictionary) =
+let step (c : char) (dict : Trie) =
     match dict with
         | Leaf -> None
         | Node (b, l) when l.[at (c.ToString())].Value = Leaf -> None
