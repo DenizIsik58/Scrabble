@@ -1,10 +1,29 @@
 ﻿namespace YourClientName
 
+module internal State =
+    type coord = int * int
+    type tile = char * int
+    type piece = uint * tile
+    type move = (coord * piece) list
+    // Make sure to keep your state localised in this module. It makes your life a whole lot easier.
+    // Currently, it only keeps track of your hand, your player numer, your board, and your dictionary,
+    // but it could, potentially, keep track of other useful
+    // information, such as number of players, player turn, etc.
+
+    type state = {
+        board         : Parser.board
+        piecesOnBoard : Map<coord, piece>
+        dict          : ScrabbleUtil.Dictionary.Dict
+        playerNumber  : uint32
+        hand          : MultiSet.MultiSet<uint32>
+    }
+    
 module Scrabble =
 
     open ScrabbleUtil
     open System.IO
 
+    
     val startGame :
         boardProg ->                 (* Scrabble board *)
         (bool -> Dictionary.Dict) -> (* Dictionary (call with true if using a Gaddag, and false if using a Trie) *)

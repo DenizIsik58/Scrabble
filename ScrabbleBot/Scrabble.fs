@@ -7,11 +7,15 @@ open System.IO
 
 open ScrabbleUtil.DebugPrint
 
-// The RegEx module is only used to parse human input. It is not used for the final product.
 
+// The RegEx module is only used to parse human input. It is not used for the final product.
+          
 module RegEx =
+    
     open System.Text.RegularExpressions
 
+     
+      
     let (|Regex|_|) pattern input =
         let m = Regex.Match(input, pattern)
         if m.Success then Some(List.tail [ for g in m.Groups -> g.Value ])
@@ -35,7 +39,11 @@ module RegEx =
         hand |>
         MultiSet.fold (fun _ x i -> forcePrint (sprintf "%d -> (%A, %d)\n" x (Map.find x pieces) i)) ()
 
-module State = 
+module State =
+    type coord = int * int
+    type tile = char * int
+    type piece = uint * tile
+    type move = (coord * piece) list
     // Make sure to keep your state localised in this module. It makes your life a whole lot easier.
     // Currently, it only keeps track of your hand, your player numer, your board, and your dictionary,
     // but it could, potentially, keep track of other useful
@@ -43,12 +51,13 @@ module State =
 
     type state = {
         board         : Parser.board
+        piecesOnBoard : Map<coord, piece>
         dict          : ScrabbleUtil.Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
     }
 
-    let mkState b d pn h = {board = b; dict = d;  playerNumber = pn; hand = h }
+    let mkState b d pn h = {board = b; piecesOnBoard = Map.empty; dict = d;  playerNumber = pn; hand = h }
 
     let board st         = st.board
     let dict st          = st.dict
@@ -67,7 +76,8 @@ module Scrabble =
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             let input =  System.Console.ReadLine()
             let move = RegEx.parseMove input
-
+            // TODO 4. Make a new file - a bot which automates moves. Give it pieces, st.piecesOnBoard, st.hand and returns a move.
+        
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             send cstream (SMPlay move)
 
@@ -75,11 +85,19 @@ module Scrabble =
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
 
             match msg with
-            | RCM (CMPlaySuccess(ms, points, newPieces)) ->
+            | RCM (CMPlaySuccess(ms, points, newPieces)) -> 
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
+                // TODO: 1. extract id (uint32) from ms, and remove it from the hand
+                // TODO: 2. Add new pieces (id of the tile, amount of times id has been drawn) to the current hand by adding the ids to the hand
+                // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard
+                
+                // if A has id 1 and i draw it 1 time it will be newPieces(1, 1)
+                // if B has id 2 and i draw it 3 times it will be newPieces (2, 3)
+                
                 let st' = st // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
+                // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard
                 (* Successful play by other player. Update your state *)
                 let st' = st // This state needs to be updated
                 aux st'
