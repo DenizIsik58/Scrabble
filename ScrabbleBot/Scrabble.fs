@@ -42,7 +42,7 @@ module RegEx =
 module State =
     type coord = int * int
     type tile = char * int
-    type piece = uint * tile
+    type piece = uint32 * tile
     type move = (coord * piece) list
     // Make sure to keep your state localised in this module. It makes your life a whole lot easier.
     // Currently, it only keeps track of your hand, your player numer, your board, and your dictionary,
@@ -61,14 +61,23 @@ module State =
 
     let board st         = st.board
     let dict st          = st.dict
+    
+    let piecesOnBoard st = st.piecesOnBoard
     let playerNumber st  = st.playerNumber
     let hand st          = st.hand
 
+
 module Scrabble =
     open System.Threading
+    let givenPieces hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) -> MultiSet.add tileId amount hand) hand 
 
     let playGame cstream pieces (st : State.state) =
 
+        let st':State.state = {st with
+                               hand = st.hand
+                               piecesOnBoard = st.piecesOnBoard
+                               playerNumber = st.playerNumber
+        }
         let rec aux (st : State.state) =
             Print.printHand pieces (State.hand st)
 
@@ -76,7 +85,7 @@ module Scrabble =
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             let input =  System.Console.ReadLine()
             let move = RegEx.parseMove input
-            // TODO 4. Make a new file - a bot which automates moves. Give it pieces, st.piecesOnBoard, st.hand and returns a move.
+            // TODO 4. Make a new file - a bot which automates moves. Give it pieces, st.piecesOnBoard, st.hand and return a move.
         
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             send cstream (SMPlay move)
@@ -85,18 +94,31 @@ module Scrabble =
             debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
 
             match msg with
-            | RCM (CMPlaySuccess(ms, points, newPieces)) -> 
+            | RCM (CMPlaySuccess(ms, points, newPieces)) ->
+                let moves = ms |> List.fold (fun acc (x, (id, (c, pv))) -> id :: acc) [] // moves
+                let removed = moves |> List.fold (fun acc element -> MultiSet.removeSingle element acc ) st.hand 
+                let piecesAndCoords = ms |> List.fold (fun acc (x, (id, (c, pv))) -> (x, (id, (c, pv))):: acc) [] // piecesAndCoords
+                
+                let st:State.state = {
+                               st with
+                               hand = givenPieces removed newPieces
+                               piecesOnBoard = piecesAndCoords |> List.fold (fun acc (x, (id, (c, pv))) -> Map.add x (id, (c, pv)) acc)  st.piecesOnBoard
+                               playerNumber = st.playerNumber
+                }
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
                 // TODO: 1. extract id (uint32) from ms, and remove it from the hand
                 // TODO: 2. Add new pieces (id of the tile, amount of times id has been drawn) to the current hand by adding the ids to the hand
-                // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard
-                
-                // if A has id 1 and i draw it 1 time it will be newPieces(1, 1)
-                // if B has id 2 and i draw it 3 times it will be newPieces (2, 3)
+                // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard 
                 
                 let st' = st // This state needs to be updated
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
+                let piecesAndCoords = ms |> List.fold (fun acc (x, (id, (c, pv))) -> (x, (id, (c, pv))):: acc) [] // piecesAndCoords
+                let st:State.state = {
+                               st with
+                               piecesOnBoard = piecesAndCoords |> List.fold (fun acc (x, (id, (c, pv))) -> Map.add x (id, (c, pv)) acc)  st.piecesOnBoard
+                               playerNumber = st.playerNumber
+                }
                 // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard
                 (* Successful play by other player. Update your state *)
                 let st' = st // This state needs to be updated
@@ -110,7 +132,7 @@ module Scrabble =
             | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
 
 
-        aux st
+        aux st'
 
     let startGame 
             (boardP : boardProg) 
