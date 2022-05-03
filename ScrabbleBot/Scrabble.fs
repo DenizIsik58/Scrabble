@@ -69,6 +69,7 @@ module State =
 
 module Scrabble =
     open System.Threading
+    open Parser
     let givenPieces hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) -> MultiSet.add tileId amount hand) hand 
 
     let playGame cstream pieces (st : State.state) =
@@ -80,13 +81,11 @@ module Scrabble =
         }
         let rec aux (st : State.state) =
             Print.printHand pieces (State.hand st)
-
             // remove the force print when you move on from manual input (or when you have learnt the format)
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             let input =  System.Console.ReadLine()
-            let move = RegEx.parseMove input
+            let move = [((0,0), (1u, ('H', 2))); ((0,1), (1u, ('I', 2))) ]
             // TODO 4. Make a new file - a bot which automates moves. Give it pieces, st.piecesOnBoard, st.hand and return a move.
-        
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             send cstream (SMPlay move)
 
@@ -95,17 +94,17 @@ module Scrabble =
 
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
-                let moves = ms |> List.fold (fun acc (x, (id, (c, pv))) -> id :: acc) [] // moves
-                let removed = moves |> List.fold (fun acc element -> MultiSet.removeSingle element acc ) st.hand 
-                let piecesAndCoords = ms |> List.fold (fun acc (x, (id, (c, pv))) -> (x, (id, (c, pv))):: acc) [] // piecesAndCoords
+                (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
+                let moves = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> pId :: acc) [] // moves
+                let removed = moves |> List.fold (fun acc tile -> MultiSet.removeSingle tile acc ) st.hand 
+                let piecesAndCoords = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> (coord, (pId, (ch, pv))):: acc) [] // piecesAndCoords
                 
                 let st:State.state = {
                                st with
                                hand = givenPieces removed newPieces
-                               piecesOnBoard = piecesAndCoords |> List.fold (fun acc (x, (id, (c, pv))) -> Map.add x (id, (c, pv)) acc)  st.piecesOnBoard
+                               piecesOnBoard = piecesAndCoords |> List.fold (fun acc (coord, (pId, (ch, pv))) -> Map.add coord (pId, (ch, pv)) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }
-                (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
                 // TODO: 1. extract id (uint32) from ms, and remove it from the hand
                 // TODO: 2. Add new pieces (id of the tile, amount of times id has been drawn) to the current hand by adding the ids to the hand
                 // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard 
