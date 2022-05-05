@@ -70,8 +70,79 @@ module State =
 module Scrabble =
     open System.Threading
     open Parser
+    open State
     let givenPieces hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) -> MultiSet.add tileId amount hand) hand 
 
+     let intToChar (toAsci : uint32) = Convert.ToChar (toAsci + 64u)
+    
+    let isLegalMove (isVertical: bool) (coord: coord) (piecesOnBoard: Map<coord, piece>) =
+        let (x, y) = coord
+        
+        if isVertical then
+            let left = match Map.tryFind (x - 1, y) piecesOnBoard with
+                        | Some _ -> true
+                        | None -> false
+            let right = match Map.tryFind (x + 1, y) piecesOnBoard with
+                        | Some _ -> true
+                        | None -> false
+            
+            if right or left then false else true
+        else
+            let down = match Map.tryFind (x, y - 1) piecesOnBoard with
+                        | Some _ -> true
+                        | None -> false
+            let up = match Map.tryFind (x, y + 1) piecesOnBoard with
+                        | Some _ -> true
+                        | None -> false
+            
+            if up or down then false else true
+            
+        
+        
+        
+    let rec findMoveFromGivenCoord (isVertical: bool) (coord: coord) (st:state) (pieces: Map<uint32, Set<char * int>>) (alreadyUsedPieces: (coord * piece) list) =
+                  let (x,y) = coord
+                  let coord' = if isVertical then (x, (y + 1))  else  ((x + 1), y)
+                  
+                  match Map.tryFind coord st.piecesOnBoard with
+                  | Some(pId, (ch, pv)) -> match Dictionary.step ch st.dict with
+                                                  | Some (isEndOfWord, trie') -> let alreadyUsedPieces' = (coord, (pId, (ch, pv))) :: alreadyUsedPieces
+                                                                                 if isEndOfWord then alreadyUsedPieces
+                                                                                  else
+                                                                                    let st' = {
+                                                                                        st with
+                                                                                        dict = trie'
+                                                                                    }
+                                                                                    findMoveFromGivenCoord isVertical coord' st' pieces alreadyUsedPieces
+                                                  | None -> []
+                  | None -> Map.fold (fun acc key value ->
+                            let (ch, pv) = Map.find key pieces |> Set.maxElement 
+                            match Dictionary.step ch st.dict with
+                                  | Some (isEndOfWord, trie') -> if isLegalMove isVertical coord st.piecesOnBoard then
+                                                                        let st' =
+                                                                          {st with 
+                                                                          dict = trie'
+                                                                          hand = MultiSet.removeSingle key st.hand
+                                                                          piecesOnBoard = Map.add coord (key, (ch, pv)) st.piecesOnBoard
+                                                                        }
+                                                                        let alreadyUsedPieces' = (coord, (key, (ch, pv))) :: alreadyUsedPieces;
+                                                                        findMoveFromGivenCoord isVertical coord' st' pieces alreadyUsedPieces
+                                                                        else acc
+                                  | None -> acc ) alreadyUsedPieces st.hand
+                                                      
+                                                                                      
+                                                                                      
+                                         
+    let move (piecesOnBoard:Map<coord, piece>) (st: state) (hand: MultiSet.MultiSet<uint32>) (pieces: Map<uint32, Set<char * int>>) list =        
+        
+        if Map.isEmpty piecesOnBoard then
+            match findMoveFromGivenCoord true (0, 0) st pieces [] with
+            | [] -> findMoveFromGivenCoord false (0,0) st pieces []
+            | mv -> mv
+        else
+            Map.fold (fun _ key _ -> match findMoveFromGivenCoord true key st pieces [] with
+                                            | [] -> findMoveFromGivenCoord false key st pieces []
+                                            | mv -> mv) [] piecesOnBoard
     let playGame cstream pieces (st : State.state) =
 
         let st':State.state = {st with
@@ -84,7 +155,7 @@ module Scrabble =
             // remove the force print when you move on from manual input (or when you have learnt the format)
             forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
             let input =  System.Console.ReadLine()
-            let move = [((0,0), (1u, ('H', 2))); ((0,1), (1u, ('I', 2))) ]
+            let move = move 
             // TODO 4. Make a new file - a bot which automates moves. Give it pieces, st.piecesOnBoard, st.hand and return a move.
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             send cstream (SMPlay move)
