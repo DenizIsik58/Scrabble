@@ -39,7 +39,6 @@ let rec lookup key =
 let step (c : char) (dict : Trie) =
     match dict with
         | Leaf -> None
-        | Node (b, l) when l.[at (c.ToString())].Value = Leaf -> None
         | Node (b, l) -> Some(lookup (c.ToString()) dict, l.[at (c.ToString())].Value)
         
     

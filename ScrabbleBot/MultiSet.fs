@@ -19,11 +19,10 @@ module internal MultiSet
             s.Add(a, timesOccured - n)
         
     let removeSingle (a:'a) (s:MultiSet<'a>) : MultiSet<'a> =
-        if contains a s then
-            let value = s.TryFind a |> Option.defaultValue 0u
-            s.Remove a
-            s.Add(a, value - 1u)
-            else s
+        match a, s with
+        | a, s when (numItems a s) <= 1u -> Map.remove a s
+        | _ -> Map.add a ((numItems a s) - 1u) s
+        
     let fold f acc (s:MultiSet<'b>) = Map.fold f acc s
     
     let foldBack f (s:MultiSet<'b>) acc = Map.foldBack f s acc
