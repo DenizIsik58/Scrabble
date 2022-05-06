@@ -87,7 +87,7 @@ module Scrabble =
                         | Some _ -> true
                         | None -> false
             
-            if right or left then false else true
+            if right || left then false else true
         else
             let down = match Map.tryFind (x, y - 1) piecesOnBoard with
                         | Some _ -> true
@@ -96,7 +96,7 @@ module Scrabble =
                         | Some _ -> true
                         | None -> false
             
-            if up or down then false else true
+            if up || down then false else true
             
         
         
