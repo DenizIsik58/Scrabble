@@ -12,7 +12,7 @@ module internal State =
 
     type state = {
         board         : Parser.board
-        piecesOnBoard : Map<coord, piece>
+        piecesOnBoard : Map<coord, char>
         dict          : ScrabbleUtil.Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>

@@ -23,8 +23,10 @@ let spawnMultiples name dict bot =
     aux >> List.rev
 
 [<EntryPoint>]
-let main argv =
-    ScrabbleUtil.DebugPrint.toggleDebugPrint true // Change to false to supress debug output
+let main argv =    
+   
+    
+    ScrabbleUtil.DebugPrint.toggleDebugPrint false // Change to false to supress debug output
 
     System.Console.BackgroundColor <- System.ConsoleColor.White
     System.Console.ForegroundColor <- System.ConsoleColor.Black
@@ -68,7 +70,7 @@ let main argv =
     do ScrabbleServer.Comm.startGame 
           board dictionary handSize timeout tiles seed port players
     
-    ScrabbleUtil.DebugPrint.forcePrint ("Server has terminated. Press Enter to exit program.\n")
+    //ScrabbleUtil.DebugPrint.forcePrint ("Server has terminated. Press Enter to exit program.\n")
     System.Console.ReadLine () |> ignore
 
     0
