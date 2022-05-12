@@ -92,35 +92,35 @@ module Scrabble =
         
   
     let isLegalMove (isHorizontal: bool) (coord: coord) (piecesOnBoard: Map<coord, char>) =
-        let (x, y) = coord
+        let (xCoord, yCoord) = coord
         
-        let moveUp = if isHorizontal then (x, y - 1) else (x - 1, y)
-        let moveDown = if isHorizontal then (x, y + 1) else (x + 1, y)
-        (Map.containsKey moveUp piecesOnBoard || Map.containsKey moveDown piecesOnBoard) |> not
+        let moveUp = if isHorizontal then (xCoord, yCoord - 1) else (xCoord - 1, yCoord)
+        let moveDown = if isHorizontal then (xCoord, yCoord + 1) else (xCoord + 1, yCoord)
+        not (Map.containsKey moveUp piecesOnBoard || Map.containsKey moveDown piecesOnBoard)
         
-    let rec findMoveFromGivenCoord (isHorizontal: bool) (coordinates: coord) (st:state) (pieces: Map<uint32, Set<char * int>>) (piecesLaidOnTable: word) (bestPossibleWord: word) : word =
+    let rec findMove (isHorizontal: bool) (coordinates: coord) (st:state) (pieces: Map<uint32, Set<char * int>>) (piecesLaidOnTable: word) (bestPossibleWord: word) : word =
                   let xCoords,yCoords = coordinates
                   let changedCoords = getCoords isHorizontal (xCoords, yCoords)
                   match Map.tryFind coordinates st.piecesOnBoard with
                   | Some(ch) -> match Dictionary.step ch st.dict with
-                                                  | Some (wordEnded, trie') ->
+                                                  | Some (wordEnded, trie) ->
                                                                                 let bestPossibleWord = if wordEnded && not (Map.containsKey changedCoords st.piecesOnBoard) then bestFoundMove bestPossibleWord piecesLaidOnTable else bestPossibleWord
-                                                                                let st' = {
+                                                                                let stateUpdated = {
                                                                                     st with
-                                                                                    dict = trie'
+                                                                                    dict = trie
                                                                                 }
-                                                                                findMoveFromGivenCoord isHorizontal changedCoords st' pieces piecesLaidOnTable bestPossibleWord
+                                                                                findMove isHorizontal changedCoords stateUpdated pieces piecesLaidOnTable bestPossibleWord
                                                   | None -> bestPossibleWord
                   | None ->
                         MultiSet.fold (fun accumulator key _ ->
                                 bestFoundMove (Set.fold (fun accumulator (charVal, pointVal) ->
                                     match Dictionary.step charVal st.dict with
                                     | None -> accumulator
-                                    | Some(wordFound, trie') -> 
+                                    | Some(wordFound, trie) -> 
                                         if isLegalMove isHorizontal coordinates st.piecesOnBoard then
-                                            let st' =
+                                            let stateUpdated =
                                                 { st with 
-                                                      dict = trie'
+                                                      dict = trie
                                                       hand = MultiSet.removeSingle key st.hand
                                                       piecesOnBoard = Map.add coordinates charVal st.piecesOnBoard
                                                 }
@@ -129,29 +129,29 @@ module Scrabble =
                                                 match Map.tryFind changedCoords st.piecesOnBoard with
                                                 | None -> if wordFound && not (Map.containsKey changedCoords st.piecesOnBoard) then bestFoundMove bestPossibleWord piecesDownOnBoard else accumulator
                                                 | Some (_) -> accumulator
-                                            findMoveFromGivenCoord isHorizontal changedCoords st' pieces piecesDownOnBoard bestPossibleWord
+                                            findMove isHorizontal changedCoords stateUpdated pieces piecesDownOnBoard bestPossibleWord
                                         else
                                             accumulator
                                     ) bestPossibleWord (Map.find key pieces)) accumulator
                                 ) bestPossibleWord st.hand                                                                           
                                          
-    let move (piecesOnBoard:Map<coord, char>) (st: state) (pieces: Map<uint32, Set<char * int>>) : word =        
+    let botMove (piecesOnBoard:Map<coord, char>) (st: state) (pieces: Map<uint32, Set<char * int>>) : word =        
         
         if Map.isEmpty piecesOnBoard then
-            bestFoundMove (findMoveFromGivenCoord true (0, 0) st pieces [] []) (findMoveFromGivenCoord false (0,0) st pieces [] [])    
+            bestFoundMove (findMove true (0, 0) st pieces [] []) (findMove false (0,0) st pieces [] [])    
         else
             let rec aux coordinates : word =
                 match coordinates with
                 | [] -> []
-                | (x, y)::xs -> findMoveFromGivenCoord true (specifiedStartingCoordinates (x, y) true st.piecesOnBoard)  st pieces [] []
-                                |> bestFoundMove (findMoveFromGivenCoord false (specifiedStartingCoordinates (x, y) true st.piecesOnBoard)  st pieces [] [])
+                | (x, y)::xs -> findMove true (specifiedStartingCoordinates (x, y) true st.piecesOnBoard)  st pieces [] []
+                                |> bestFoundMove (findMove false (specifiedStartingCoordinates (x, y) true st.piecesOnBoard)  st pieces [] [])
                                 |> bestFoundMove (aux xs)
             aux (Seq.toList (Map.keys st.piecesOnBoard))
            
     let playGame cstream pieces (st : State.state) =
 
         
-        let st':State.state = {st with
+        let stateUpdate:State.state = {st with
                                hand = st.hand
                                piecesOnBoard = st.piecesOnBoard
                                playerNumber = st.playerNumber
@@ -159,7 +159,7 @@ module Scrabble =
         let rec aux (st : State.state) =
             Print.printHand pieces (State.hand st)
             // remove the force print when you move on from manual input (or when you have learnt the format)
-            let move = move st.piecesOnBoard st pieces
+            let move = botMove st.piecesOnBoard st pieces
             // TODO 4. Make a new file - a bot which automates moves. Give it pieces, st.piecesOnBoard, st.hand and return a move.
             debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             
@@ -189,15 +189,15 @@ module Scrabble =
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 let piecesAndCoords = ms |> List.fold (fun acc (x, (id, (c, pv))) -> (x, (id, (c, pv))):: acc) [] // piecesAndCoords
-                let st:State.state = {
+                let stateUpdated:State.state = {
                                st with
                                piecesOnBoard = piecesAndCoords |> List.fold (fun acc (x, (id, (c, pv))) -> Map.add x (c) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }
                 // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard
                 (* Successful play by other player. Update your state *)
-                let st' = st // This state needs to be updated
-                aux st'
+                let newState = stateUpdated // This state needs to be updated
+                aux newState
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
                 let st' = st // This state needs to be updated
@@ -210,7 +210,7 @@ module Scrabble =
             | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
 
 
-        aux st'
+        aux stateUpdate
 
     let startGame 
             (boardP : boardProg) 
