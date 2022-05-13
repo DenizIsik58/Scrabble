@@ -175,25 +175,28 @@ module Scrabble =
                 let removed = moves |> List.fold (fun acc tile -> MultiSet.removeSingle tile acc ) st.hand 
                 let piecesAndCoords = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> (coord, (pId, (ch, pv))):: acc) [] // piecesAndCoords
                 
-                let st':State.state = {
+                
+                let stateUpdated:state = {
                                st with
                                hand = givenPieces removed newPieces
                                piecesOnBoard = piecesAndCoords |> List.fold (fun acc (coord, (pId, (ch, pv))) -> Map.add coord (ch) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }
+                
                 // TODO: 1. extract id (uint32) from ms, and remove it from the hand
                 // TODO: 2. Add new pieces (id of the tile, amount of times id has been drawn) to the current hand by adding the ids to the hand
                 // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard 
                 
                  // This state needs to be updated
-                aux st'
+                aux stateUpdated
             | RCM (CMPlayed (pid, ms, points)) ->
                 let piecesAndCoords = ms |> List.fold (fun acc (x, (id, (c, pv))) -> (x, (id, (c, pv))):: acc) [] // piecesAndCoords
-                let stateUpdated:State.state = {
+                let stateUpdated:state = {
                                st with
                                piecesOnBoard = piecesAndCoords |> List.fold (fun acc (x, (id, (c, pv))) -> Map.add x (c) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }
+                printf "Hand: %A" st.hand
                 // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard
                 (* Successful play by other player. Update your state *)
                 let newState = stateUpdated // This state needs to be updated
@@ -204,6 +207,8 @@ module Scrabble =
                 aux st'
                 
             | RCM (CMPassed pid) ->
+                printf "Hand: %A" st.hand
+
                 aux st
             | RCM (CMGameOver _) -> ()
             | RCM a -> failwith (sprintf "not implmented: %A" a)
