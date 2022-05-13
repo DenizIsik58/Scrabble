@@ -74,7 +74,9 @@ module Scrabble =
     open Parser
     open State
     
-    let givenPieces hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) -> MultiSet.add tileId amount hand) hand 
+    let givenPieces hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) ->
+        let timesOccured = Map.tryFind tileId hand |> Option.defaultValue 0u
+        if (timesOccured >= 1u) then MultiSet.add tileId (timesOccured + 1u) hand else MultiSet.add tileId amount hand) hand 
 
     let bestFoundMove (firstMove: word) (secondMove: word) : word =
          let longest = if (List.length firstMove > List.length secondMove) then firstMove else secondMove
@@ -96,7 +98,7 @@ module Scrabble =
         
         let moveUp = if isHorizontal then (xCoord, yCoord - 1) else (xCoord - 1, yCoord)
         let moveDown = if isHorizontal then (xCoord, yCoord + 1) else (xCoord + 1, yCoord)
-        not (Map.containsKey moveUp piecesOnBoard || Map.containsKey moveDown piecesOnBoard)
+        (Map.containsKey moveUp piecesOnBoard || Map.containsKey moveDown piecesOnBoard) |> not
         
     let rec findMove (isHorizontal: bool) (coordinates: coord) (st:state) (pieces: Map<uint32, Set<char * int>>) (piecesLaidOnTable: word) (bestPossibleWord: word) : word =
                   let xCoords,yCoords = coordinates
@@ -152,30 +154,27 @@ module Scrabble =
 
         
         let stateUpdate:State.state = {st with
-                               hand = st.hand
                                piecesOnBoard = st.piecesOnBoard
                                playerNumber = st.playerNumber
         }
         let rec aux (st : State.state) =
-            Print.printHand pieces (State.hand st)
+            //Print.printHand pieces (State.hand st)
             // remove the force print when you move on from manual input (or when you have learnt the format)
             let move = botMove st.piecesOnBoard st pieces
             // TODO 4. Make a new file - a bot which automates moves. Give it pieces, st.piecesOnBoard, st.hand and return a move.
-            debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            //debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
             
             if List.length move = 0 then send cstream (SMPass) else send cstream (SMPlay move)
 
             let msg = recv cstream
-            debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+            //debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
 
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
                 let moves = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> pId :: acc) [] // moves
-                let removed = moves |> List.fold (fun acc tile -> MultiSet.removeSingle tile acc ) st.hand 
+                let removed = moves |> List.fold (fun acc tile -> MultiSet.removeSingle tile acc ) st.hand
                 let piecesAndCoords = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> (coord, (pId, (ch, pv))):: acc) [] // piecesAndCoords
-                
-                
                 let stateUpdated:state = {
                                st with
                                hand = givenPieces removed newPieces
@@ -196,18 +195,16 @@ module Scrabble =
                                piecesOnBoard = piecesAndCoords |> List.fold (fun acc (x, (id, (c, pv))) -> Map.add x (c) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }
-                printf "Hand: %A" st.hand
                 // TODO: 3. Add all coordinates and pieces from ms to st.piecesOnBoard
                 (* Successful play by other player. Update your state *)
-                let newState = stateUpdated // This state needs to be updated
-                aux newState
+                let st' = stateUpdated // This state needs to be updated
+                aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
                 let st' = st // This state needs to be updated
                 aux st'
                 
             | RCM (CMPassed pid) ->
-                printf "Hand: %A" st.hand
 
                 aux st
             | RCM (CMGameOver _) -> ()
