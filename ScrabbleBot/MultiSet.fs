@@ -12,7 +12,7 @@ module internal MultiSet
     let add (a:'a) (n:uint32) (s:MultiSet<'a>) : MultiSet<'a> = s.Add (a, n)
     let addSingle (a:'a) (s:MultiSet<'a>) =
         let timesOccured = s.TryFind a |> Option.defaultValue 0u
-        if timesOccured > 1u then s.Add (a, timesOccured + 1u) else s.Add(a, 1u)  
+        if timesOccured >= 1u then s.Add (a, timesOccured + 1u) else s.Add(a, 1u)  
     let remove (a:'a) (n:uint32) (s:MultiSet<'a>) : MultiSet<'a> =
         let timesOccured = s.TryFind a |> Option.defaultValue 0u
         if timesOccured <= n then
