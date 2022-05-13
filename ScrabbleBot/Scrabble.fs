@@ -1,5 +1,6 @@
 ﻿namespace YourClientName
 
+open System.Runtime.InteropServices
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
 
@@ -87,7 +88,7 @@ module Scrabble =
     
     let rec specifiedStartingCoordinates coord isHorizontal board =
         let x, y = coord
-        let changedCoords = getCoords isHorizontal (x, y)
+        let changedCoords = if isHorizontal then (x - 1, y) else (x, y - 1)
         match Map.tryFind changedCoords board with
         | None -> coord
         | Some _ -> specifiedStartingCoordinates changedCoords isHorizontal board
@@ -172,15 +173,15 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let moves = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> pId :: acc) [] // moves
-                let removed = moves |> List.fold (fun acc tile -> MultiSet.removeSingle tile acc ) st.hand
+                let moves = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> MultiSet.removeSingle pId st.hand) st.hand // moves
                 let piecesAndCoords = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> (coord, (pId, (ch, pv))):: acc) [] // piecesAndCoords
                 let stateUpdated:state = {
                                st with
-                               hand = getNewHand removed newPieces
+                               hand = failwith ""
                                piecesOnBoard = piecesAndCoords |> List.fold (fun acc (coord, (pId, (ch, pv))) -> Map.add coord (ch) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }
+                printfn "My H"
                 
                 // TODO: 1. extract id (uint32) from ms, and remove it from the hand
                 // TODO: 2. Add new pieces (id of the tile, amount of times id has been drawn) to the current hand by adding the ids to the hand
