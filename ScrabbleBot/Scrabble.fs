@@ -173,11 +173,14 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let moves = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> MultiSet.removeSingle pId st.hand) st.hand // moves
+                let moves = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> pId :: acc) [] // moves
+                let removed = moves |> List.fold (fun acc tile -> MultiSet.removeSingle tile acc ) st.hand
+                let newHand = newPieces |> List.fold (fun acc (pId, amount) -> MultiSet.add pId amount acc ) removed
+                
                 let piecesAndCoords = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> (coord, (pId, (ch, pv))):: acc) [] // piecesAndCoords
                 let stateUpdated:state = {
                                st with
-                               hand = failwith ""
+                               hand = newHand
                                piecesOnBoard = piecesAndCoords |> List.fold (fun acc (coord, (pId, (ch, pv))) -> Map.add coord (ch) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }

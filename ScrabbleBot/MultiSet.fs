@@ -9,7 +9,10 @@ module internal MultiSet
     let contains a (s:MultiSet<'a>) = s.ContainsKey a
     let numItems a (s:MultiSet<'a>) = s.TryFind a |> Option.defaultValue 0u
         
-    let add (a:'a) (n:uint32) (s:MultiSet<'a>) : MultiSet<'a> = s.Add (a, n)
+    let add (a:'a) (n:uint32) (s:MultiSet<'a>) : MultiSet<'a> =
+        let timesOccured = Map.tryFind a s |> Option.defaultValue 0u
+        if (timesOccured >= 1u) then s.Add (a, timesOccured + n) else s.Add (a, n)
+
     let addSingle (a:'a) (s:MultiSet<'a>) =
         let timesOccured = s.TryFind a |> Option.defaultValue 0u
         if timesOccured >= 1u then s.Add (a, timesOccured + 1u) else s.Add(a, 1u)  
