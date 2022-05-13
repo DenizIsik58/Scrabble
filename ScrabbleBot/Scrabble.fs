@@ -74,7 +74,7 @@ module Scrabble =
     open Parser
     open State
     
-    let givenPieces hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) ->
+    let getNewHand hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) ->
         let timesOccured = Map.tryFind tileId hand |> Option.defaultValue 0u
         if (timesOccured >= 1u) then MultiSet.add tileId (timesOccured + 1u) hand else MultiSet.add tileId amount hand) hand 
 
@@ -177,7 +177,7 @@ module Scrabble =
                 let piecesAndCoords = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> (coord, (pId, (ch, pv))):: acc) [] // piecesAndCoords
                 let stateUpdated:state = {
                                st with
-                               hand = givenPieces removed newPieces
+                               hand = getNewHand removed newPieces
                                piecesOnBoard = piecesAndCoords |> List.fold (fun acc (coord, (pId, (ch, pv))) -> Map.add coord (ch) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }
