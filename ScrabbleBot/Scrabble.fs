@@ -76,7 +76,7 @@ module Scrabble =
     
     let getNewHand hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) ->
         let timesOccured = Map.tryFind tileId hand |> Option.defaultValue 0u
-        if (timesOccured >= 1u) then MultiSet.add tileId (timesOccured + 1u) hand else MultiSet.add tileId amount hand) hand 
+        if (timesOccured >= 1u) then MultiSet.add tileId (timesOccured + amount) hand else MultiSet.add tileId amount hand) hand 
 
     let bestFoundMove (firstMove: word) (secondMove: word) : word =
          let longest = if (List.length firstMove > List.length secondMove) then firstMove else secondMove
