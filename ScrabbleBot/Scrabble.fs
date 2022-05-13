@@ -115,8 +115,8 @@ module Scrabble =
                                                   | None -> bestPossibleWord
                   | None ->
                         MultiSet.fold (fun accumulator key _ ->
-                                bestFoundMove (Set.fold (fun accumulator (charVal, pointVal) ->
-                                    match Dictionary.step charVal st.dict with
+                                bestFoundMove (Set.fold (fun accumulator (c, p) ->
+                                    match Dictionary.step c st.dict with
                                     | None -> accumulator
                                     | Some(wordFound, trie) -> 
                                         if isLegalMove isHorizontal coordinates st.piecesOnBoard then
@@ -124,9 +124,9 @@ module Scrabble =
                                                 { st with 
                                                       dict = trie
                                                       hand = MultiSet.removeSingle key st.hand
-                                                      piecesOnBoard = Map.add coordinates charVal st.piecesOnBoard
+                                                      piecesOnBoard = Map.add coordinates c st.piecesOnBoard
                                                 }
-                                            let piecesDownOnBoard = ((coordinates, (key, (charVal, pointVal))) :: piecesLaidOnTable)
+                                            let piecesDownOnBoard = ((coordinates, (key, (c, p))) :: piecesLaidOnTable)
                                             let bestPossibleWord =
                                                 match Map.tryFind changedCoords st.piecesOnBoard with
                                                 | None -> if wordFound && not (Map.containsKey changedCoords st.piecesOnBoard) then bestFoundMove bestPossibleWord piecesDownOnBoard else accumulator
@@ -158,7 +158,7 @@ module Scrabble =
                                playerNumber = st.playerNumber
         }
         let rec aux (st : State.state) =
-            //Print.printHand pieces (State.hand st)
+            Print.printHand pieces (State.hand st)
             // remove the force print when you move on from manual input (or when you have learnt the format)
             let move = botMove st.piecesOnBoard st pieces
             // TODO 4. Make a new file - a bot which automates moves. Give it pieces, st.piecesOnBoard, st.hand and return a move.
