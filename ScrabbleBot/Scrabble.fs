@@ -147,7 +147,7 @@ module Scrabble =
                 match coordinates with
                 | [] -> []
                 | (x, y)::xs -> findMove true (specifiedStartingCoordinates (x, y) true st.piecesOnBoard)  st pieces [] []
-                                |> bestFoundMove (findMove false (specifiedStartingCoordinates (x, y) true st.piecesOnBoard)  st pieces [] [])
+                                |> bestFoundMove (findMove false (specifiedStartingCoordinates (x, y) false st.piecesOnBoard)  st pieces [] [])
                                 |> bestFoundMove (aux xs)
             aux (Seq.toList (Map.keys st.piecesOnBoard))
            
