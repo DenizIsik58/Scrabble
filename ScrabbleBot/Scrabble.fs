@@ -107,7 +107,7 @@ module Scrabble =
                   match Map.tryFind coordinates st.piecesOnBoard with
                   | Some(ch) -> match Dictionary.step ch st.dict with
                                                   | Some (wordEnded, trie) ->
-                                                                                let bestPossibleWord = if wordEnded && not (Map.containsKey changedCoords st.piecesOnBoard) then bestFoundMove bestPossibleWord piecesLaidOnTable else bestPossibleWord
+                                                                                let bestPossibleWord = if wordEnded && (Map.containsKey changedCoords st.piecesOnBoard) |> not then bestFoundMove bestPossibleWord piecesLaidOnTable else bestPossibleWord
                                                                                 let stateUpdated = {
                                                                                     st with
                                                                                     dict = trie
@@ -115,27 +115,27 @@ module Scrabble =
                                                                                 findMove isHorizontal changedCoords stateUpdated pieces piecesLaidOnTable bestPossibleWord
                                                   | None -> bestPossibleWord
                   | None ->
-                        MultiSet.fold (fun accumulator key _ ->
-                                bestFoundMove (Set.fold (fun accumulator (c, p) ->
-                                    match Dictionary.step c st.dict with
+                        MultiSet.fold (fun accumulator pieceId _ ->
+                                bestFoundMove (Set.fold (fun accumulator (charPiece, pointValue) ->
+                                    match Dictionary.step charPiece st.dict with
                                     | None -> accumulator
-                                    | Some(wordFound, trie) -> 
+                                    | Some(endW, trie) -> 
                                         if isLegalMove isHorizontal coordinates st.piecesOnBoard then
                                             let stateUpdated =
                                                 { st with 
                                                       dict = trie
-                                                      hand = MultiSet.removeSingle key st.hand
-                                                      piecesOnBoard = Map.add coordinates c st.piecesOnBoard
+                                                      hand = MultiSet.removeSingle pieceId st.hand
+                                                      piecesOnBoard = Map.add coordinates charPiece st.piecesOnBoard
                                                 }
-                                            let piecesDownOnBoard = ((coordinates, (key, (c, p))) :: piecesLaidOnTable)
+                                            let piecesDownOnBoard = ((coordinates, (pieceId, (charPiece, pointValue))) :: piecesLaidOnTable)
                                             let bestPossibleWord =
                                                 match Map.tryFind changedCoords st.piecesOnBoard with
-                                                | None -> if wordFound && not (Map.containsKey changedCoords st.piecesOnBoard) then bestFoundMove bestPossibleWord piecesDownOnBoard else accumulator
+                                                | None -> if endW && (Map.containsKey changedCoords st.piecesOnBoard) |> not then bestFoundMove bestPossibleWord piecesDownOnBoard else accumulator
                                                 | Some (_) -> accumulator
                                             findMove isHorizontal changedCoords stateUpdated pieces piecesDownOnBoard bestPossibleWord
                                         else
                                             accumulator
-                                    ) bestPossibleWord (Map.find key pieces)) accumulator
+                                    ) bestPossibleWord (Map.find pieceId pieces)) accumulator
                                 ) bestPossibleWord st.hand                                                                           
                                          
     let botMove (piecesOnBoard:Map<coord, char>) (st: state) (pieces: Map<uint32, Set<char * int>>) : word =        
