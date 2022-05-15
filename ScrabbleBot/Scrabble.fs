@@ -96,10 +96,9 @@ module Scrabble =
   
     let isLegalMove (isHorizontal: bool) (coord: coord) (piecesOnBoard: Map<coord, char>) =
         let (xCoord, yCoord) = coord
-        
-        let moveUp = if isHorizontal then (xCoord, yCoord - 1) else (xCoord - 1, yCoord)
-        let moveDown = if isHorizontal then (xCoord, yCoord + 1) else (xCoord + 1, yCoord)
-        (Map.containsKey moveUp piecesOnBoard || Map.containsKey moveDown piecesOnBoard) |> not
+        let minusXY = if isHorizontal then (xCoord, yCoord - 1) else (xCoord - 1, yCoord)
+        let plusXY = if isHorizontal then (xCoord, yCoord + 1) else (xCoord + 1, yCoord)
+        if (not ((Map.containsKey minusXY piecesOnBoard) || (Map.containsKey plusXY piecesOnBoard))) then true else false
         
     let rec findMove (isHorizontal: bool) (coordinates: coord) (st:state) (pieces: Map<uint32, Set<char * int>>) (piecesLaidOnTable: word) (bestPossibleWord: word) : word =
                   let xCoords,yCoords = coordinates
