@@ -1,0 +1,3 @@
+We have only achieved the mandatory part of this project, which is for the bot to be able to play against itself on an infinite board.
+
+Please note that you can build and run the project using dotnet run and dotnet build. Do not use the rider run button.
