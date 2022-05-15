@@ -100,19 +100,18 @@ module Scrabble =
         let plusXY = if isHorizontal then (xCoord, yCoord + 1) else (xCoord + 1, yCoord)
         if (not ((Map.containsKey minusXY piecesOnBoard) || (Map.containsKey plusXY piecesOnBoard))) then true else false
         
-    let rec findMove (isHorizontal: bool) (coordinates: coord) (st:state) (pieces: Map<uint32, Set<char * int>>) (piecesLaidOnTable: word) (bestPossibleWord: word) : word =
+    let rec findMove (isHorizontal: bool) (coordinates: coord) (st:state) (pieces: Map<uint32, Set<char * int>>) (piecesLaidOnTable: word) (longestWord: word) : word =
                   let xCoords,yCoords = coordinates
                   let changedCoords =  getCoords isHorizontal (xCoords, yCoords)
                   match Map.tryFind coordinates st.piecesOnBoard with
-                  | Some(ch) -> match Dictionary.step ch st.dict with
+                  | Some(characterOnBoard) -> match Dictionary.step characterOnBoard st.dict with
                                                   | Some (wordEnded, trie) ->
-                                                                                let bestPossibleWord = if wordEnded && (Map.containsKey changedCoords st.piecesOnBoard) |> not then bestFoundMove bestPossibleWord piecesLaidOnTable else bestPossibleWord
                                                                                 let stateUpdated = {
                                                                                     st with
                                                                                     dict = trie
                                                                                 }
-                                                                                findMove isHorizontal changedCoords stateUpdated pieces piecesLaidOnTable bestPossibleWord
-                                                  | None -> bestPossibleWord
+                                                                                findMove isHorizontal changedCoords stateUpdated pieces piecesLaidOnTable (if wordEnded && (Map.containsKey changedCoords st.piecesOnBoard) |> not then bestFoundMove longestWord piecesLaidOnTable else longestWord)
+                                                  | None -> longestWord
                   | None ->
                         MultiSet.fold (fun accumulator pieceId _ ->
                                 bestFoundMove (Set.fold (fun accumulator (charPiece, pointValue) ->
@@ -127,18 +126,18 @@ module Scrabble =
                                                       piecesOnBoard = Map.add coordinates charPiece st.piecesOnBoard
                                                 }
                                             let piecesDownOnBoard = ((coordinates, (pieceId, (charPiece, pointValue))) :: piecesLaidOnTable)
-                                            let bestPossibleWord =
-                                                match Map.tryFind changedCoords st.piecesOnBoard with
-                                                | None -> if endW && (Map.containsKey changedCoords st.piecesOnBoard) |> not then bestFoundMove bestPossibleWord piecesDownOnBoard else accumulator
-                                                | Some (_) -> accumulator
-                                            findMove isHorizontal changedCoords stateUpdated pieces piecesDownOnBoard bestPossibleWord
+                                            let bestPossibleWord = Map.tryFind changedCoords st.piecesOnBoard
+                                            let resultBestPossibleWord = match bestPossibleWord with
+                                            | None -> if endW && (Map.containsKey changedCoords st.piecesOnBoard) |> not then bestFoundMove longestWord piecesDownOnBoard else accumulator
+                                            | Some (_) -> accumulator
+                                            findMove isHorizontal changedCoords stateUpdated pieces piecesDownOnBoard resultBestPossibleWord
                                         else
                                             accumulator
-                                    ) bestPossibleWord (Map.find pieceId pieces)) accumulator
-                                ) bestPossibleWord st.hand                                                                           
+                                    ) longestWord (Map.find pieceId pieces)) accumulator
+                                ) longestWord st.hand                                                                           
                                          
     let botMove (piecesOnBoard:Map<coord, char>) (st: state) (pieces: Map<uint32, Set<char * int>>) : word =        
-        
+        let coordsToList = (Seq.toList (Map.keys st.piecesOnBoard))
         if Map.isEmpty piecesOnBoard then
             bestFoundMove (findMove true (0, 0) st pieces [] []) (findMove false (0,0) st pieces [] [])    
         else
@@ -148,7 +147,7 @@ module Scrabble =
                 | (x, y)::xs -> findMove true (specifiedStartingCoordinates (x, y) true st.piecesOnBoard)  st pieces [] []
                                 |> bestFoundMove (findMove false (specifiedStartingCoordinates (x, y) false st.piecesOnBoard)  st pieces [] [])
                                 |> bestFoundMove (aux xs)
-            aux (Seq.toList (Map.keys st.piecesOnBoard))
+            aux coordsToList
     let playGame cstream pieces (st : State.state) =
 
         let stateUpdate:State.state = {st with
