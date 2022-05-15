@@ -138,16 +138,16 @@ module Scrabble =
                                          
     let botMove (piecesOnBoard:Map<coord, char>) (st: state) (pieces: Map<uint32, Set<char * int>>) : word =        
         let coordsToList = (Seq.toList (Map.keys st.piecesOnBoard))
-        if Map.isEmpty piecesOnBoard then
+        if Map.count piecesOnBoard = 0 then
             bestFoundMove (findMove true (0, 0) st pieces [] []) (findMove false (0,0) st pieces [] [])    
         else
-            let rec aux coordinates : word =
+            let rec runThroughCoords coordinates : word =
                 match coordinates with
                 | [] -> []
-                | (x, y)::xs -> findMove true (specifiedStartingCoordinates (x, y) true st.piecesOnBoard)  st pieces [] []
-                                |> bestFoundMove (findMove false (specifiedStartingCoordinates (x, y) false st.piecesOnBoard)  st pieces [] [])
-                                |> bestFoundMove (aux xs)
-            aux coordsToList
+                | (xC, yC)::xs -> findMove true (specifiedStartingCoordinates (xC, yC) true st.piecesOnBoard)  st pieces [] []
+                                |> bestFoundMove (findMove false (specifiedStartingCoordinates (xC, yC) false st.piecesOnBoard)  st pieces [] [])
+                                |> bestFoundMove (runThroughCoords xs)
+            runThroughCoords coordsToList
     let playGame cstream pieces (st : State.state) =
 
         let stateUpdate:State.state = {st with
