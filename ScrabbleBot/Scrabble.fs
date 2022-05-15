@@ -75,20 +75,20 @@ module Scrabble =
     open Parser
     open State
     
-    let getNewHand hand newPieces = newPieces |> List.fold (fun _ (tileId, amount) ->
-        let timesOccured = Map.tryFind tileId hand |> Option.defaultValue 0u
-        if (timesOccured >= 1u) then MultiSet.add tileId (timesOccured + amount) hand else MultiSet.add tileId amount hand) hand 
-
+    let getNewHand removed newPieces = newPieces |> List.fold (fun acc (pId, amount) -> MultiSet.add pId amount acc ) removed
+        
     let bestFoundMove (firstMove: word) (secondMove: word) : word =
          let longest = if (List.length firstMove > List.length secondMove) then firstMove else secondMove
          if List.length longest > 1 then longest else []
 
             
-    let getCoords isHorizontal (x, y) : coord = if isHorizontal then (x + 1, y) else (x, y + 1)
+    let getCoords isHorizontal (xCoord, yCoord) : coord =
+            if isHorizontal then (xCoord + 1, yCoord) else (xCoord, yCoord + 1)
+
     
     let rec specifiedStartingCoordinates coord isHorizontal board =
-        let x, y = coord
-        let changedCoords = if isHorizontal then (x - 1, y) else (x, y - 1)
+        let xCoord, yCoord = coord
+        let changedCoords = if isHorizontal then (xCoord - 1, yCoord) else (xCoord, yCoord - 1)
         match Map.tryFind changedCoords board with
         | None -> coord
         | Some _ -> specifiedStartingCoordinates changedCoords isHorizontal board
@@ -103,7 +103,7 @@ module Scrabble =
         
     let rec findMove (isHorizontal: bool) (coordinates: coord) (st:state) (pieces: Map<uint32, Set<char * int>>) (piecesLaidOnTable: word) (bestPossibleWord: word) : word =
                   let xCoords,yCoords = coordinates
-                  let changedCoords = getCoords isHorizontal (xCoords, yCoords)
+                  let changedCoords =  getCoords isHorizontal (xCoords, yCoords)
                   match Map.tryFind coordinates st.piecesOnBoard with
                   | Some(ch) -> match Dictionary.step ch st.dict with
                                                   | Some (wordEnded, trie) ->
@@ -150,10 +150,8 @@ module Scrabble =
                                 |> bestFoundMove (findMove false (specifiedStartingCoordinates (x, y) false st.piecesOnBoard)  st pieces [] [])
                                 |> bestFoundMove (aux xs)
             aux (Seq.toList (Map.keys st.piecesOnBoard))
-           
     let playGame cstream pieces (st : State.state) =
 
-        
         let stateUpdate:State.state = {st with
                                piecesOnBoard = st.piecesOnBoard
                                playerNumber = st.playerNumber
@@ -175,16 +173,14 @@ module Scrabble =
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
                 let moves = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> pId :: acc) [] // moves
                 let removed = moves |> List.fold (fun acc tile -> MultiSet.removeSingle tile acc ) st.hand
-                let newHand = newPieces |> List.fold (fun acc (pId, amount) -> MultiSet.add pId amount acc ) removed
                 
                 let piecesAndCoords = ms |> List.fold (fun acc (coord, (pId, (ch, pv))) -> (coord, (pId, (ch, pv))):: acc) [] // piecesAndCoords
                 let stateUpdated:state = {
                                st with
-                               hand = newHand
+                               hand = getNewHand removed newPieces
                                piecesOnBoard = piecesAndCoords |> List.fold (fun acc (coord, (pId, (ch, pv))) -> Map.add coord (ch) acc)  st.piecesOnBoard
                                playerNumber = st.playerNumber
                 }
-                printfn "My H"
                 
                 // TODO: 1. extract id (uint32) from ms, and remove it from the hand
                 // TODO: 2. Add new pieces (id of the tile, amount of times id has been drawn) to the current hand by adding the ids to the hand
